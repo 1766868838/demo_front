@@ -98,6 +98,7 @@
   </div>
 </template>
 <script>
+import { ref } from "vue";
 import router from "@/router";
 import { reactive, toRefs } from "@vue/reactivity";
 import Axios from "axios";
@@ -119,7 +120,7 @@ export default {
       confirmPassword: "",
       identifyCode: "",
     });
-
+    const confirm = ref(0)
     // 方法
     // 登录
     function loginPassword() {
@@ -165,23 +166,26 @@ export default {
     // 注册
     function register() {
       console.log("注册", registerForm);
-
-      Axios.get("http://localhost:8081/key/regist",{
-        params:{
-          username: registerForm.rUsername,
-          password: registerForm.rPassword,
-          email: registerForm.rEmail,
-          code: registerForm.identifyCode
-        }
-      }).then(req =>{
-        console.log(req.data)
-        if(req.data == true){
-          ElMessage.success("注册成功")
-        }
-        else{
-          ElMessage.error("注册失败，账号或邮箱已使用")
-        }
-      })
+      if(confirm.value == 0){
+        ElMessage.error("注册失败，密码与确认密码不一致")
+      }
+      else{
+        Axios.get("http://localhost:8081/key/regist",{
+          params:{
+            username: registerForm.rUsername,
+            password: registerForm.rPassword,
+            email: registerForm.rEmail,
+          }
+        }).then(req =>{
+          console.log(req.data)
+          if(req.data == true){
+            ElMessage.success("注册成功")
+          }
+          else{
+            ElMessage.error("注册失败，账号或邮箱已使用")
+          }
+        })
+      }
     }
 
     // 获取验证码
@@ -204,14 +208,18 @@ export default {
 
     // 确认密码
     const confirmFunc = () => {
-      if (registerForm.confirmPassword !== registerForm.rPassword)
+      if (registerForm.confirmPassword !== registerForm.rPassword){
         ElMessage.error("密码与确认密码不一致.");
+        confirm.value = 0
+      }
+      else confirm.value = 1;
     };
     
     return {
       ...toRefs(form),
       ...toRefs(codeForm),
       ...toRefs(registerForm),
+      confirm,
       loginPassword,
       manage,
       loginCode,
