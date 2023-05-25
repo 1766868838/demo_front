@@ -10,7 +10,7 @@
           </el-input>
       </el-col>
       <el-col :span="4">
-        <el-button type="primary">添加用户</el-button>
+        <el-button type="primary" @click="dialogFormVisible2 = true">添加用户</el-button>
       </el-col>
     </el-row>
 
@@ -22,20 +22,23 @@
       <el-table-column fixed="right" label="Operations" width="120">
         <template #default="scope">
           <el-button link type="primary" size="small" @click="DeleteInf(scope.row)">Delete</el-button>
-          <el-button link type="primary" size="small" @click="EditInf(scope.$index)">Edit</el-button>
+          <el-button link type="primary" size="small" @click="EditInf(scope.row)">Edit</el-button>
         </template>
       </el-table-column>
     </el-table>
 
     <el-dialog v-model="dialogFormVisible" title="更新用户数据(留空代表该项数据不变)">
       <el-form :model="form">
-        <el-form-item label="新用户名" :label-width="formLabelWidth">
+        <el-form-item label="用户名" :label-width="formLabelWidth">
           <el-input v-model="form.username" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="新密码" :label-width="formLabelWidth">
-          <el-input v-model="form.password" autocomplete="off" />
+        <el-form-item label="密码" :label-width="formLabelWidth">
+          <el-input v-model="form.password"  type="password" autocomplete="off" />
         </el-form-item>
-        <el-form-item label="新邮箱" :label-width="formLabelWidth">
+        <el-form-item label="确认密码" :label-width="formLabelWidth">
+          <el-input v-model="form.rPassword" type="password" autocomplete="off" @blur="confirmFunc"/>
+        </el-form-item>
+        <el-form-item label="邮箱" :label-width="formLabelWidth">
           <el-input v-model="form.email" autocomplete="off" />
         </el-form-item>
       </el-form>
@@ -43,6 +46,31 @@
         <span class="dialog-footer">
           <el-button @click="dialogFormVisible = false">Cancel</el-button>
           <el-button type="primary" @click="updateInf()">
+            Confirm
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="dialogFormVisible2" title="新增用户数据(留空代表该项数据不变)">
+      <el-form :model="form">
+        <el-form-item label="新用户名" :label-width="formLabelWidth">
+          <el-input v-model="form.username" autocomplete="off" />
+        </el-form-item>
+        <el-form-item label="新密码" :label-width="formLabelWidth">
+          <el-input v-model="form.password"  type="password" autocomplete="off" />
+        </el-form-item>
+        <el-form-item label="确认密码" :label-width="formLabelWidth">
+          <el-input v-model="form.rPassword" type="password" autocomplete="off" @blur="confirmFunc"/>
+        </el-form-item>
+        <el-form-item label="新邮箱" :label-width="formLabelWidth">
+          <el-input v-model="form.email" autocomplete="off" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="dialogFormVisible2 = false">Cancel</el-button>
+          <el-button type="primary" @click="addInf()">
             Confirm
           </el-button>
         </span>
@@ -64,10 +92,12 @@
     username: '',
     email: '',
     password: '',
+    rPassword: '',
   });
   const formLabelWidth = '100px'
   let dialogFormVisible = ref(false)
-  let nowIndex = ref(0)
+  let dialogFormVisible2 = ref(false)
+  let oldUsername = ref('')
   let tests = ref([])
   let total = 0
   let queryInfo = reactive({
@@ -91,12 +121,14 @@
   };
 
   //在跳出的对话框中点击确认后的界面
-  function updateInf(row){
-    console.log(row)
+  function updateInf(){
     axios.get('http://localhost:8081/inf/update',{
-      username : form.username,
-      password: form.password,
-      email: form.email
+      params:{
+        newUsername : form.username,
+        oldUsername : oldUsername.value,
+        password: form.password,
+        email: form.email
+      }
     }).then(function(res){
       if(res.data == false){
         ElMessage.error("更新失败")
@@ -104,12 +136,39 @@
       else{
         //隐藏对话框
         dialogFormVisible.value = false
+        ElMessage.success("更新成功")
+        getUserList()
       }
     })
   }
 
+  function addInf(){
+    
+    axios.get("http://localhost:8081/key/regist",{
+      params:{
+        username: form.username,
+        password: form.password,
+        email: form.email,
+      }
+    }).then(req =>{
+      console.log(req.data)
+      if(req.data == true){
+        ElMessage.success("注册成功")
+        dialogFormVisible2.value = false;
+        getUserList()
+      }
+      else{
+        ElMessage.error("注册失败，账号或邮箱已使用")
+      }
+    })
+  }
+
+  const confirmFunc = () => {
+    if (form.password !== form.rPassword)
+      ElMessage.error("密码与确认密码不一致.");
+  };
+
   function DeleteInf(row){
-    console.log(row.value)
     axios.get('http://localhost:8081/inf/delete',{
       params:{
         username :row.username
@@ -128,8 +187,8 @@
 
   function EditInf(row){
     dialogFormVisible.value = true
-    nowIndex = row
-    console.log(row)
+    oldUsername.value = row.username
+    console.log(oldUsername.value)
   }
 
 </script>
